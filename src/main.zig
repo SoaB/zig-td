@@ -1,45 +1,89 @@
-//! By convention, main.zig is where your main function lives in the case that
-//! you are building an executable. If you are making a library, the convention
-//! is to delete this file and start with root.zig instead.
-
-pub fn main() !void {
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
-
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
-
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
-
-    try bw.flush(); // Don't forget to flush!
-}
-
-test "simple test" {
-    var list = std.ArrayList(i32).init(std.testing.allocator);
-    defer list.deinit(); // Try commenting this out and see if zig detects the memory leak!
-    try list.append(42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
-}
-
-test "use other module" {
-    try std.testing.expectEqual(@as(i32, 150), lib.add(100, 50));
-}
-
-test "fuzz example" {
-    const global = struct {
-        fn testOne(input: []const u8) anyerror!void {
-            // Try passing `--fuzz` to `zig build test` and see if it manages to fail this test case!
-            try std.testing.expect(!std.mem.eql(u8, "canyoufindme", input));
-        }
-    };
-    try std.testing.fuzz(global.testOne, .{});
-}
+const rl = @cImport({
+    @cDefine("SUPPORT_GIF_RECORDING", "1");
+    @cInclude("Raylib.h");
+});
 
 const std = @import("std");
+const math = std.math;
+const print = std.debug.print;
+const gd = @import("globalData.zig");
+///////////////////////////////////////////////////////////////////////////
+const towers = @import("tower.zig").Towers;
+const towerType = @import("tower.zig").TowerType;
+const enemys = @import("enemy.zig").Enemys;
+const enemyType = @import("enemy.zig").EnemyType;
+const gameTime = @import("gameTime.zig").GameTime;
+const projectiles = @import("projectiles.zig").Projectiles;
 
-/// This imports the separate module containing `root.zig`. Take a look in `build.zig` for details.
-const lib = @import("TowerDefance_lib");
+var nextSpwnTime: f32 = 0.0;
+
+pub fn initGame() void {
+    gameTime.update(0.0);
+    towers.init();
+    enemys.init();
+    projectiles.init();
+    towers.add(0, 0, towerType.TOWER_TYPE_BASE);
+    towers.add(2, 0, towerType.TOWER_TYPE_GUN);
+    towers.add(-2, 0, towerType.TOWER_TYPE_GUN);
+    enemys.add(5, 4, enemyType.MIMION);
+}
+
+pub fn updateGame() void {
+    const dt = rl.GetFrameTime();
+    gameTime.update(dt);
+    //print("dt: {} time: {}\n", .{ dt, gTime.getTime() });
+    enemys.update();
+    towers.update();
+    projectiles.update();
+    //spwn enemies
+    if (gameTime.getTime() > nextSpwnTime) {
+        nextSpwnTime = gameTime.getTime() + 1.0;
+        const randVal: i32 = rl.GetRandomValue(-5, 5);
+        const randSide: i32 = rl.GetRandomValue(0, 3);
+        var x: i32 = 0;
+        var y: i32 = 0;
+        if (randSide == 0) {
+            x = -5;
+        } else if (randSide == 1) {
+            x = 5;
+        } else {
+            x = randVal;
+        }
+        if (randSide == 2) {
+            y = -5;
+        } else if (randSide == 3) {
+            y = 5;
+        } else {
+            y = randVal;
+        }
+        enemys.add(x, y, enemyType.MIMION);
+    }
+}
+pub fn main() !void {
+    //    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    //    const allocator = gpa.allocator();
+    rl.InitWindow(gd.scrWidth, gd.scrHeight, "Tower Defense");
+    rl.SetTargetFPS(60);
+    var camera: rl.Camera3D = rl.Camera3D{};
+    camera.position = rl.Vector3{ .x = 0.0, .y = 10.0, .z = 5.0 };
+    camera.target = rl.Vector3{ .x = 0.0, .y = 0.0, .z = 0.0 };
+    camera.up = rl.Vector3{ .x = 0.0, .y = 0.0, .z = -1.0 };
+    camera.fovy = 45.0;
+    camera.projection = rl.CAMERA_PERSPECTIVE;
+    initGame();
+    while (!rl.WindowShouldClose()) {
+        rl.BeginDrawing();
+        rl.ClearBackground(rl.DARKBLUE);
+        rl.BeginMode3D(camera);
+        rl.DrawGrid(10, 1.0);
+        towers.draw();
+        enemys.draw();
+        projectiles.draw();
+        updateGame();
+        rl.EndMode3D();
+        rl.DrawText("Tower Defense", 5, 5, 20, rl.WHITE);
+        rl.EndDrawing();
+    }
+    rl.CloseWindow();
+    //    _ = gpa.deinit();
+}
