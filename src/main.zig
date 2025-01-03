@@ -22,9 +22,9 @@ pub fn initGame() void {
     towers.init();
     enemys.init();
     projectiles.init();
-    towers.add(0, 0, towerType.TOWER_TYPE_BASE);
-    towers.add(2, 0, towerType.TOWER_TYPE_GUN);
-    towers.add(-2, 0, towerType.TOWER_TYPE_GUN);
+    towers.add(0, 0, towerType.BASE);
+    towers.add(2, 0, towerType.GUN);
+    towers.add(-2, 0, towerType.GUN);
     enemys.add(5, 4, enemyType.MIMION);
 }
 
@@ -63,7 +63,7 @@ pub fn main() !void {
     //    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     //    const allocator = gpa.allocator();
     rl.InitWindow(gd.scrWidth, gd.scrHeight, "Tower Defense");
-    rl.SetTargetFPS(60);
+    rl.SetTargetFPS(30);
     var camera: rl.Camera3D = rl.Camera3D{};
     camera.position = rl.Vector3{ .x = 0.0, .y = 10.0, .z = 5.0 };
     camera.target = rl.Vector3{ .x = 0.0, .y = 0.0, .z = 0.0 };

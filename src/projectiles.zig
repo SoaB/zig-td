@@ -17,13 +17,12 @@ const gameTime = @import("gameTime.zig").GameTime;
 
 const PROJECTILE_MAX_COUNT = 1200;
 
-pub const PROJECTILE_TYPE = enum(u8) {
+pub const ProjectileType = enum(u8) {
     NONE,
     BULLET,
 };
 
 pub const Projectile = struct {
-    projectileType: PROJECTILE_TYPE,
     shoot: f32,
     arrivalTime: f32,
     damage: f32,
@@ -31,6 +30,7 @@ pub const Projectile = struct {
     target: rl.Vector2,
     directionNormal: rl.Vector2,
     targetEnemy: enemyIdentity,
+    projectileType: ProjectileType,
 };
 
 pub const Projectiles = struct {
@@ -39,7 +39,7 @@ pub const Projectiles = struct {
     pub fn init() void {
         for (&projectiles) |*p| {
             p.* = .{
-                .projectileType = PROJECTILE_TYPE.NONE,
+                .projectileType = ProjectileType.NONE,
                 .shoot = 0,
                 .arrivalTime = 0,
                 .damage = 0,
@@ -51,10 +51,13 @@ pub const Projectiles = struct {
         }
         count = 0;
     }
-    pub fn add(pType: PROJECTILE_TYPE, emyId: usize, pos: rl.Vector2, target: rl.Vector2, speed: f32, damage: f32) void {
+    pub fn add(pType: ProjectileType, emyId: usize, pos: rl.Vector2, target: rl.Vector2, speed: f32, damage: f32) void {
         for (0..PROJECTILE_MAX_COUNT) |i| {
             const p = &projectiles[i];
-            if (p.*.projectileType == PROJECTILE_TYPE.NONE) {
+            if (p.*.projectileType == pType and p.*.targetEnemy.index == emyId) {
+                return;
+            }
+            if (p.*.projectileType == ProjectileType.NONE) {
                 p.*.projectileType = pType;
                 p.*.shoot = gameTime.getTime();
                 p.*.arrivalTime = gameTime.getTime() + vec2.distance(pos, target) / speed;
@@ -71,14 +74,14 @@ pub const Projectiles = struct {
         }
     }
     pub fn update() void {
-        for (0..PROJECTILE_MAX_COUNT) |i| {
+        for (0..count) |i| {
             const p = &projectiles[i];
-            if (p.*.projectileType == PROJECTILE_TYPE.NONE) {
+            if (p.*.projectileType == ProjectileType.NONE) {
                 continue;
             }
             const transition: f32 = (gameTime.getTime() - p.*.shoot) / (p.*.arrivalTime - p.*.shoot);
             if (transition >= 1.0) {
-                p.*.projectileType = PROJECTILE_TYPE.NONE;
+                p.*.projectileType = ProjectileType.NONE;
                 const eid = enemyId.tryResolve(p.*.targetEnemy);
                 if (eid) |e| {
                     enemys.remove(e);
@@ -88,9 +91,9 @@ pub const Projectiles = struct {
         }
     }
     pub fn draw() void {
-        for (0..PROJECTILE_MAX_COUNT) |i| {
+        for (0..count) |i| {
             const p = &projectiles[i];
-            if (p.*.projectileType == PROJECTILE_TYPE.NONE) {
+            if (p.*.projectileType == ProjectileType.NONE) {
                 continue;
             }
             const transition: f32 = (gameTime.getTime() - p.*.shoot) / (p.*.arrivalTime - p.*.shoot);
@@ -103,10 +106,11 @@ pub const Projectiles = struct {
             const dx = p.*.directionNormal.x;
             const dy = p.*.directionNormal.y;
             var d: f32 = 1.0;
-            while (d > 0.0) : (d -= 0.25) {
+            while (d > 0.0) {
                 x -= dx * 0.1;
                 y -= dy * 0.1;
                 const size = 0.1 * d;
+                d -= 0.25;
                 rl.DrawCube(rl.Vector3{ .x = x, .y = 0.2, .z = y }, size, size, size, rl.RED);
             }
         }
