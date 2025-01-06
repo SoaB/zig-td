@@ -13,7 +13,7 @@ const enemys = enemy.Enemys;
 
 const vec2 = @import("vec.zig");
 
-const gameTime = @import("gameTime.zig").GameTime;
+const gameTime = @import("GameTime.zig");
 
 const PROJECTILE_MAX_COUNT = 1200;
 
@@ -64,7 +64,7 @@ pub const Projectiles = struct {
                 p.*.damage = damage;
                 p.*.position = pos;
                 p.*.target = target;
-                p.*.directionNormal = vec2.normalize(vec2.sub(target, pos));
+                p.*.directionNormal = vec2.normal(vec2.sub(target, pos));
                 p.*.targetEnemy = enemyId.getId(emyId);
                 if (count <= i) {
                     count = @as(u32, @intCast(i)) + 1;
@@ -84,7 +84,7 @@ pub const Projectiles = struct {
                 p.*.projectileType = ProjectileType.NONE;
                 const eid = enemyId.tryResolve(p.*.targetEnemy);
                 if (eid) |e| {
-                    enemys.remove(e);
+                    enemys.addDamage(e, p.*.damage);
                 }
                 continue;
             }

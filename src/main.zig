@@ -12,7 +12,7 @@ const towers = @import("tower.zig").Towers;
 const towerType = @import("tower.zig").TowerType;
 const enemys = @import("enemy.zig").Enemys;
 const enemyType = @import("enemy.zig").EnemyType;
-const gameTime = @import("gameTime.zig").GameTime;
+const gameTime = @import("GameTime.zig");
 const projectiles = @import("projectiles.zig").Projectiles;
 
 var nextSpwnTime: f32 = 0.0;
@@ -63,7 +63,7 @@ pub fn main() !void {
     //    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     //    const allocator = gpa.allocator();
     rl.InitWindow(gd.scrWidth, gd.scrHeight, "Tower Defense");
-    rl.SetTargetFPS(30);
+    rl.SetTargetFPS(60);
     var camera: rl.Camera3D = rl.Camera3D{};
     camera.position = rl.Vector3{ .x = 0.0, .y = 10.0, .z = 5.0 };
     camera.target = rl.Vector3{ .x = 0.0, .y = 0.0, .z = 0.0 };

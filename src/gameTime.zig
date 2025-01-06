@@ -1,20 +1,16 @@
-const Timer = struct {
+const GameTime = struct {
     time: f32 = 0.0,
-    deltaTime: f32 = 0.0,
+    delta_time: f32 = 0.0,
 };
-pub const GameTime = struct {
-    var timer: Timer = Timer{};
-    pub fn update(deltaTime: f32) void {
-        timer.deltaTime = deltaTime;
-        timer.time += deltaTime;
-    }
-    pub fn reset() void {
-        timer.time = 0.0;
-    }
-    pub fn getDeltaTime() f32 {
-        return timer.deltaTime;
-    }
-    pub fn getTime() f32 {
-        return timer.time;
-    }
-};
+pub var gTime: GameTime = GameTime{};
+
+pub fn update(delta_time: f32) void {
+    gTime.delta_time = delta_time;
+    gTime.time += delta_time;
+}
+pub fn getTime() f32 {
+    return gTime.time;
+}
+pub fn getDeltaTime() f32 {
+    return gTime.delta_time;
+}
