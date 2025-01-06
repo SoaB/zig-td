@@ -5,7 +5,7 @@ const rl = @cImport({
 const std = @import("std");
 const math = std.math;
 const print = std.debug.print;
-const vec = @import("vec.zig");
+const Vec2f = @import("Vector2.zig").Vec2f;
 const gameTime = @import("GameTime.zig");
 const enemy = @import("enemy.zig").Enemy;
 const enemies = @import("enemy.zig").Enemys;
@@ -19,13 +19,14 @@ pub const TowerType = enum(u8) {
     NONE,
     BASE,
     GUN,
+    _,
 };
 
 pub const Tower = struct {
     x: i32,
     y: i32,
-    towerType: TowerType,
-    coolDown: f32,
+    tower_type: TowerType,
+    cool_down: f32,
 };
 
 pub const Towers = struct {
@@ -36,7 +37,8 @@ pub const Towers = struct {
         for (&towers) |*t| {
             t.*.x = 0.0;
             t.*.y = 0.0;
-            t.*.towerType = TowerType.NONE;
+            t.*.tower_type = TowerType.NONE;
+            t.*.cool_down = 0.0;
         }
         count = 0;
     }
@@ -48,7 +50,7 @@ pub const Towers = struct {
         }
         return false;
     }
-    pub fn add(x: i32, y: i32, towerType: TowerType) void {
+    pub fn add(x: i32, y: i32, tower_type: TowerType) void {
         if (count >= TOWER_MAX_COUNT) {
             return;
         }
@@ -57,7 +59,8 @@ pub const Towers = struct {
         }
         towers[count].x = x;
         towers[count].y = y;
-        towers[count].towerType = towerType;
+        towers[count].tower_type = tower_type;
+        towers[count].cool_down = 0.0;
         count += 1;
     }
     pub fn draw() void {
@@ -66,39 +69,33 @@ pub const Towers = struct {
             const x: f32 = @floatFromInt(tower.x);
             const z: f32 = @floatFromInt(tower.y);
             rl.DrawCube(rl.Vector3{ .x = x, .y = 0.125, .z = z }, 1.0, 0.25, 1.0, rl.GRAY);
-            switch (tower.towerType) {
+            switch (tower.tower_type) {
                 TowerType.BASE => rl.DrawCube(rl.Vector3{ .x = x, .y = 0.4, .z = z }, 0.8, 0.8, 0.8, rl.MAROON),
                 TowerType.GUN => rl.DrawCube(rl.Vector3{ .x = x, .y = 0.2, .z = z }, 0.8, 0.4, 0.8, rl.DARKPURPLE),
                 else => {},
             }
         }
     }
-    pub fn getPosition(t: Tower) rl.Vector2 {
+    pub fn getPosition(t: Tower) Vec2f {
         const x: f32 = @floatFromInt(t.x);
         const z: f32 = @floatFromInt(t.y);
-        return rl.Vector2{ .x = x, .y = z };
-    }
-    fn fabs(x: f32) f32 {
-        if (x < 0.0) {
-            return -x;
-        }
-        return x;
+        return Vec2f{ .x = x, .y = z };
     }
     pub fn gunUpdate(t: *Tower) void {
-        if (t.*.coolDown <= 0.0) {
+        if (t.*.cool_down <= 0.0) {
             const eIndex: ?usize = enemies.getClosetIdxToCastle(t.*.x, t.*.y, 3.0);
             if (eIndex) |e| {
-                t.*.coolDown = 0.5;
+                t.*.cool_down = 0.5;
                 const bullet_speed: f32 = 2.0;
                 const bullet_damage: f32 = 3.0;
                 const delta_time: f32 = gameTime.getTime() - enemies.getStartMovingTime(e);
-                var future_pos: rl.Vector2 = enemies.getPosition(e, delta_time);
-                const tower_pos: rl.Vector2 = rl.Vector2{ .x = @as(f32, @floatFromInt(t.*.x)), .y = @as(f32, @floatFromInt(t.*.y)) };
-                var time_to_hit1: f32 = vec.distance(tower_pos, future_pos) / bullet_speed;
+                var future_pos: Vec2f = enemies.getPosition(e, delta_time);
+                const tower_pos: Vec2f = Vec2f{ .x = @as(f32, @floatFromInt(t.*.x)), .y = @as(f32, @floatFromInt(t.*.y)) };
+                var time_to_hit1: f32 = Vec2f.distance(tower_pos, future_pos) / bullet_speed;
                 var got_it: bool = false;
                 while (!got_it) {
                     future_pos = enemies.getPosition(e, delta_time + time_to_hit1);
-                    const distance: f32 = vec.distance(tower_pos, future_pos);
+                    const distance: f32 = Vec2f.distance(tower_pos, future_pos);
                     const time_to_hit2: f32 = distance / bullet_speed;
                     if (@abs(time_to_hit2 - time_to_hit1) < 0.01) {
                         got_it = true;
@@ -109,13 +106,13 @@ pub const Towers = struct {
                 enemies.addfetureDamage(e, bullet_damage);
             }
         } else {
-            t.*.coolDown -= gameTime.getDeltaTime();
+            t.*.cool_down -= gameTime.getDeltaTime();
         }
     }
     pub fn update() void {
         for (0..count) |i| {
             const tower = towers[i];
-            switch (tower.towerType) {
+            switch (tower.tower_type) {
                 TowerType.GUN => gunUpdate(@constCast(&tower)),
                 else => {},
             }

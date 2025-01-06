@@ -11,7 +11,7 @@ const enemyIdentity = enemy.EnemyIdentity;
 const enemyId = enemy.EnemyId;
 const enemys = enemy.Enemys;
 
-const vec2 = @import("vec.zig");
+const Vec2f = @import("Vector2.zig").Vec2f;
 
 const gameTime = @import("GameTime.zig");
 
@@ -24,13 +24,13 @@ pub const ProjectileType = enum(u8) {
 
 pub const Projectile = struct {
     shoot: f32,
-    arrivalTime: f32,
+    arrival_time: f32,
     damage: f32,
-    position: rl.Vector2,
-    target: rl.Vector2,
-    directionNormal: rl.Vector2,
-    targetEnemy: enemyIdentity,
-    projectileType: ProjectileType,
+    position: Vec2f,
+    target: Vec2f,
+    direction_normal: Vec2f,
+    target_enemy: enemyIdentity,
+    projectile_type: ProjectileType,
 };
 
 pub const Projectiles = struct {
@@ -39,33 +39,33 @@ pub const Projectiles = struct {
     pub fn init() void {
         for (&projectiles) |*p| {
             p.* = .{
-                .projectileType = ProjectileType.NONE,
+                .projectile_type = ProjectileType.NONE,
                 .shoot = 0,
-                .arrivalTime = 0,
+                .arrival_time = 0,
                 .damage = 0,
-                .position = rl.Vector2{ .x = 0, .y = 0 },
-                .target = rl.Vector2{ .x = 0, .y = 0 },
-                .directionNormal = rl.Vector2{ .x = 0, .y = 0 },
-                .targetEnemy = .{ .index = 0, .generation = 0 },
+                .position = Vec2f{ .x = 0, .y = 0 },
+                .target = Vec2f{ .x = 0, .y = 0 },
+                .direction_normal = Vec2f{ .x = 0, .y = 0 },
+                .target_enemy = .{ .index = 0, .generation = 0 },
             };
         }
         count = 0;
     }
-    pub fn add(pType: ProjectileType, emyId: usize, pos: rl.Vector2, target: rl.Vector2, speed: f32, damage: f32) void {
+    pub fn add(pType: ProjectileType, emyId: usize, pos: Vec2f, target: Vec2f, speed: f32, damage: f32) void {
         for (0..PROJECTILE_MAX_COUNT) |i| {
             const p = &projectiles[i];
-            if (p.*.projectileType == pType and p.*.targetEnemy.index == emyId) {
+            if (p.*.projectile_type == pType and p.*.target_enemy.index == emyId) {
                 return;
             }
-            if (p.*.projectileType == ProjectileType.NONE) {
-                p.*.projectileType = pType;
+            if (p.*.projectile_type == ProjectileType.NONE) {
+                p.*.projectile_type = pType;
                 p.*.shoot = gameTime.getTime();
-                p.*.arrivalTime = gameTime.getTime() + vec2.distance(pos, target) / speed;
+                p.*.arrival_time = gameTime.getTime() + pos.distance(target) / speed;
                 p.*.damage = damage;
                 p.*.position = pos;
                 p.*.target = target;
-                p.*.directionNormal = vec2.normal(vec2.sub(target, pos));
-                p.*.targetEnemy = enemyId.getId(emyId);
+                p.*.direction_normal = Vec2f.normal(target.sub(pos));
+                p.*.target_enemy = enemyId.getId(emyId);
                 if (count <= i) {
                     count = @as(u32, @intCast(i)) + 1;
                 }
@@ -76,13 +76,13 @@ pub const Projectiles = struct {
     pub fn update() void {
         for (0..count) |i| {
             const p = &projectiles[i];
-            if (p.*.projectileType == ProjectileType.NONE) {
+            if (p.*.projectile_type == ProjectileType.NONE) {
                 continue;
             }
-            const transition: f32 = (gameTime.getTime() - p.*.shoot) / (p.*.arrivalTime - p.*.shoot);
+            const transition: f32 = (gameTime.getTime() - p.*.shoot) / (p.*.arrival_time - p.*.shoot);
             if (transition >= 1.0) {
-                p.*.projectileType = ProjectileType.NONE;
-                const eid = enemyId.tryResolve(p.*.targetEnemy);
+                p.*.projectile_type = ProjectileType.NONE;
+                const eid = enemyId.tryResolve(p.*.target_enemy);
                 if (eid) |e| {
                     enemys.addDamage(e, p.*.damage);
                 }
@@ -93,18 +93,18 @@ pub const Projectiles = struct {
     pub fn draw() void {
         for (0..count) |i| {
             const p = &projectiles[i];
-            if (p.*.projectileType == ProjectileType.NONE) {
+            if (p.*.projectile_type == ProjectileType.NONE) {
                 continue;
             }
-            const transition: f32 = (gameTime.getTime() - p.*.shoot) / (p.*.arrivalTime - p.*.shoot);
+            const transition: f32 = (gameTime.getTime() - p.*.shoot) / (p.*.arrival_time - p.*.shoot);
             if (transition >= 1.0) {
                 continue;
             }
-            const position: rl.Vector2 = vec2.lerp(p.*.position, p.*.target, transition);
+            const position: Vec2f = Vec2f.lerp(p.*.position, p.*.target, transition);
             var x: f32 = position.x;
             var y: f32 = position.y;
-            const dx = p.*.directionNormal.x;
-            const dy = p.*.directionNormal.y;
+            const dx = p.*.direction_normal.x;
+            const dy = p.*.direction_normal.y;
             var d: f32 = 1.0;
             while (d > 0.0) {
                 x -= dx * 0.1;
