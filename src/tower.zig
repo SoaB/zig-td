@@ -88,13 +88,17 @@ pub const Towers = struct {
                 t.*.cool_down = 0.5;
                 const bullet_speed: f32 = 2.0;
                 const bullet_damage: f32 = 3.0;
+                var gg: u32 = 0;
+                var velocity: Vec2f = enemies.getSimVelocity(e);
                 const delta_time: f32 = gameTime.getTime() - enemies.getStartMovingTime(e);
-                var future_pos: Vec2f = enemies.getPosition(e, delta_time);
+                var future_pos: Vec2f = enemies.getPosition(e, delta_time, @constCast(&velocity), &gg);
                 const tower_pos: Vec2f = Vec2f{ .x = @as(f32, @floatFromInt(t.*.x)), .y = @as(f32, @floatFromInt(t.*.y)) };
                 var time_to_hit1: f32 = Vec2f.distance(tower_pos, future_pos) / bullet_speed;
                 var got_it: bool = false;
                 while (!got_it) {
-                    future_pos = enemies.getPosition(e, delta_time + time_to_hit1);
+                    velocity = enemies.getSimVelocity(e);
+                    gg = 0;
+                    future_pos = enemies.getPosition(e, delta_time + time_to_hit1, &velocity, &gg);
                     const distance: f32 = Vec2f.distance(tower_pos, future_pos);
                     const time_to_hit2: f32 = distance / bullet_speed;
                     if (@abs(time_to_hit2 - time_to_hit1) < 0.01) {

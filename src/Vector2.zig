@@ -91,6 +91,10 @@ pub fn Vector2(comptime T: type) type {
             const result: f32 = @sqrt((v1.x - v2.x) * (v1.x - v2.x) + (v1.y - v2.y) * (v1.y - v2.y));
             return result;
         }
+        pub fn distanceSquared(v1: Self, v2: Self) T {
+            const result: f32 = (v1.x - v2.x) * (v1.x - v2.x) + (v1.y - v2.y) * (v1.y - v2.y);
+            return result;
+        }
         pub fn lerp(v1: Self, v2: Self, amount: T) Self {
             const x: T = v1.x + amount * (v2.x - v1.x);
             const y: T = v1.y + amount * (v2.y - v1.y);
