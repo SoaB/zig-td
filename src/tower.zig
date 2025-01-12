@@ -19,6 +19,7 @@ pub const TowerType = enum(u8) {
     NONE,
     BASE,
     GUN,
+    WALL,
     _,
 };
 
@@ -30,8 +31,8 @@ pub const Tower = struct {
 };
 
 pub const Towers = struct {
-    var towers: [TOWER_MAX_COUNT]Tower = undefined;
-    var count: u32 = 0;
+    pub var towers: [TOWER_MAX_COUNT]Tower = undefined;
+    pub var count: u32 = 0;
 
     pub fn init() void {
         for (&towers) |*t| {
@@ -72,6 +73,7 @@ pub const Towers = struct {
             switch (tower.tower_type) {
                 TowerType.BASE => rl.DrawCube(rl.Vector3{ .x = x, .y = 0.4, .z = z }, 0.8, 0.8, 0.8, rl.MAROON),
                 TowerType.GUN => rl.DrawCube(rl.Vector3{ .x = x, .y = 0.2, .z = z }, 0.8, 0.4, 0.8, rl.DARKPURPLE),
+                TowerType.WALL => rl.DrawCube(rl.Vector3{ .x = x, .y = 0.5, .z = z }, 1.0, 1.0, 1.0, rl.LIGHTGRAY),
                 else => {},
             }
         }

@@ -6,7 +6,11 @@ const std = @import("std");
 const math = std.math;
 const print = std.debug.print;
 const Vec2f = @import("Vector2.zig").Vec2f;
+const Vec3f = @import("Vector3.zig").Vec3f;
 const gameTime = @import("GameTime.zig");
+const PathFind = @import("PathFind.zig");
+const Towers = @import("Tower.zig");
+const TowerType = Towers.TowerType;
 const ENEMY_MAX_PATH_COUNT = 8;
 pub const ENEMY_MAX_COUNT = 400;
 pub const EnemyType = enum(u8) {
@@ -175,6 +179,9 @@ pub const Enemys = struct {
     }
     pub fn draw() void {
         for (enemies[0..count], 0..count) |e, i| {
+            if (e.enemy_type == EnemyType.NONE) {
+                continue;
+            }
             var gg: u32 = 0;
             const posi: Vec2f = getPosition(i, gameTime.getTime() - e.start_moving_time, @constCast(&e.sim_velocity), &gg);
             if (e.move_path_count > 0) {
@@ -201,21 +208,27 @@ pub const Enemys = struct {
         const castle_y: i32 = 0;
         const dx: i32 = castle_x - cX;
         const dy: i32 = castle_y - cY;
-        if (@abs(dx) <= 0 and @abs(dy) <= 0) {
+        if (@abs(dx) == 0 and @abs(dy) == 0) {
             nX.* = cX;
             nY.* = cY;
             return true;
         }
-        if (@abs(dx) > @abs(dy)) {
-            if (dx > 0) {
+        const gradient: Vec2f = PathFind.getGradient(Vec3f{ .x = @floatFromInt(cX), .y = 0, .z = @floatFromInt(cY) });
+        if (gradient.x == 0 and gradient.y == 0) {
+            nX.* = cX;
+            nY.* = cY;
+            return true;
+        }
+        if (@abs(gradient.x) > @abs(gradient.y)) {
+            nY.* = cY;
+            if (gradient.x > 0) {
                 nX.* = cX + 1;
             } else {
                 nX.* = cX - 1;
             }
-            nY.* = cY;
         } else {
             nX.* = cX;
-            if (dy > 0) {
+            if (gradient.y > 0) {
                 nY.* = cY + 1;
             } else {
                 nY.* = cY - 1;
@@ -297,6 +310,67 @@ pub const Enemys = struct {
             }
         }
     }
+    pub fn handleCollisionEnemyAndTower() void {
+        for (enemies[0..count]) |*e| {
+            if (e.*.enemy_type == EnemyType.NONE) {
+                continue;
+            }
+            const enemy_radius: f32 = EnemyConfigs[@intFromEnum(e.*.enemy_type)].radius;
+            // linear search for towers,could be optimized by using path finding tower map,
+            // but it's not necessary for now.
+            for (Towers.towers[0..Towers.count]) |*tower| {
+                if (tower.*.towerType == TowerType.NONE) {
+                    continue;
+                }
+                const distance_squared: f32 = Vec2f.distanceSquared(e.*.sim_position, Vec2f{ .x = tower.*.x, .y = tower.*.y });
+                const radius: f32 = EnemyConfigs[@intFromEnum(e.*.enemy_type)].radius + 2.0;
+                if (distance_squared > radius * radius) {
+                    continue;
+                }
+                const dx: f32 = tower.*.x - e.*.sim_position.x;
+                const dy: f32 = tower.*.y - e.*.sim_position.y;
+                const abs_dx: f32 = @abs(dx);
+                const abs_dy: f32 = @abs(dy);
+                // const enemy_radius: f32 = EnemyConfigs[@intFromEnum(e.*.enemy_type)].radius;
+                if (abs_dx <= 0.5 and abs_dx <= abs_dy) {
+                    // vertical collision; push the enemy out horizontally
+                    const overlap: f32 = enemy_radius + 0.5 - abs_dy;
+                    if (overlap < 0.0) {
+                        continue;
+                    }
+                    const direction: f32 = if (dy > 0) -1.0 else 1.0;
+                    e.*.sim_position.y += direction * overlap;
+                } else if (abs_dy <= 0.5 and abs_dy <= abs_dx) {
+                    // horizontal collision; push the enemy out horizontally
+                    const overlap: f32 = enemy_radius + 0.5 - abs_dx;
+                    if (overlap < 0.0) {
+                        continue;
+                    }
+                    const direction: f32 = if (dx > 0) -1.0 else 1.0;
+                    e.*.sim_position.x += direction * overlap;
+                } else {
+                    // possible collision with a corner
+                    const corner_dx: f32 = if (dx > 0) 0.5 else -0.5;
+                    const corner_dy: f32 = if (dy > 0) 0.5 else -0.5;
+                    const corner_x: f32 = e.*.x + corner_dx;
+                    const corner_y: f32 = e.*.y + corner_dy;
+                    rl.DrawCube(rl.Vector3{ .x = corner_x, .y = 0.2, .z = corner_y }, 0.1, 2.0, 0.1, rl.PINK);
+                    const corner_distance_squared: f32 = Vec2f.distanceSquared(Vec2f{ .x = corner_x, .y = corner_y }, e.*.sim_position);
+                    if (corner_distance_squared > radius * radius) {
+                        continue;
+                    }
+                    // push the enemy out along the diagonal
+                    const corner_distance: f32 = @sqrt(corner_distance_squared);
+                    const overlap: f32 = radius - corner_distance;
+                    const distance_x: f32 = if (corner_distance > 0) (corner_x - e.*.sim_position.x) / corner_distance else -corner_dx;
+                    const distance_y: f32 = if (corner_distance > 0) (corner_y - e.*.sim_position.y) / corner_distance else -corner_dy;
+                    e.*.sim_position.x -= distance_x * overlap;
+                    e.*.sim_position.y -= distance_y * overlap;
+                }
+            }
+        }
+    }
+
     pub fn update() void {
         const castle_x: f32 = 0;
         const castle_y: f32 = 0;
